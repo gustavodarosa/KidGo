@@ -1,4 +1,12 @@
 {
-  "name": "KidGoApp",
-  "displayName": "KidGoApp"
+  "expo": {
+    "name": "KidGoApp",
+    "slug": "KidGoApp",
+    "version": "0.0.1",
+    "sdkVersion": "51.0.0",
+    "platforms": [
+      "ios",
+      "android"
+    ]
+  }
 }
