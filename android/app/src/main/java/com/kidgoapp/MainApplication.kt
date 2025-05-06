@@ -1,4 +1,4 @@
-package com.kidgo
+package com.kidgoapp
 
 import android.app.Application
 import com.facebook.react.PackageList

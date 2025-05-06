@@ -24,7 +24,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     window = UIWindow(frame: UIScreen.main.bounds)
 
     factory.startReactNative(
-      withModuleName: "KidGo",
+      withModuleName: "KidGoApp",
       in: window,
       launchOptions: launchOptions
     )
