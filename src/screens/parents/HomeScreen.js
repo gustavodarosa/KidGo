@@ -78,6 +78,10 @@ const HomeScreen = () => {
         alert('Funcionalidade "Perfil dos Filhos" em desenvolvimento!');
     };
 
+    const handleNavigateToSearch = () => {
+        navigation.navigate('SearchScreen'); // Navega para a SearchScreen
+    };
+
     const scrollViewStyle = StyleSheet.compose(styles.container, {
         marginTop: Platform.OS === 'android' ? -StatusBar.currentHeight : -10,
     });
@@ -85,21 +89,24 @@ const HomeScreen = () => {
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView style={scrollViewStyle}>
-                {/* Barra de Pesquisa */}
-                <View style={styles.searchBarContainer}>
-                    <FontAwesome name="search" size={20} color={COLORS.secondary} style={styles.searchIcon} />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Pra onde vamos levar hoje?"
-                        value={searchText}
-                        onChangeText={setSearchText}
-                        placeholderTextColor={COLORS.secondary}
-                    />
-                    <TouchableOpacity style={styles.nowButton}>
-                        <Ionicons name="time-outline" size={20} color={COLORS.primary} />
-                        <Text style={styles.nowButtonText}>Agora</Text>
-                    </TouchableOpacity>
-                </View>
+                {/* Barra de Pesquisa agora é clicável */}
+                <TouchableOpacity onPress={handleNavigateToSearch} activeOpacity={0.8}>
+                    <View style={styles.searchBarContainer}>
+                        <FontAwesome name="search" size={20} color={COLORS.secondary} style={styles.searchIcon} />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Pra onde vamos levar hoje?"
+                            value={searchText}
+                            // onChangeText={setSearchText} // Pode ser removido se a edição for só na SearchScreen
+                            placeholderTextColor={COLORS.secondary}
+                            editable={false} // Impede a edição direta na HomeScreen
+                        />
+                        <TouchableOpacity style={styles.nowButton}>
+                            <Ionicons name="time-outline" size={20} color={COLORS.primary} />
+                            <Text style={styles.nowButtonText}>Agora</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
 
                 {/* Sugestões */}
                 <View style={styles.suggestionsSection}>
