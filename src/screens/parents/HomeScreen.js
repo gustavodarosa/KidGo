@@ -9,12 +9,13 @@ import {
     TextInput,
     Platform,
     StatusBar,
+    Dimensions, // Importar Dimensions
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
-import { MaterialIcons } from '@expo/vector-icons';
+// import { MaterialIcons } from '@expo/vector-icons'; // Removido pois não estava sendo usado diretamente aqui
 
 const COLORS = {
     backgroundLightGray: '#F9F9F9',
@@ -23,6 +24,8 @@ const COLORS = {
     accent: '#FFFFFF',
     lightGray: '#EEEEEE',
     cardShadow: '#000',
+    babyBlueLight: '#A0D2EB', // Azul bebê um pouco mais escuro
+    babyBlueDark: '#87CEEB',  // Azul bebê um pouco mais escuro
 };
 
 const SUGGESTED_PLACES = [
@@ -32,6 +35,14 @@ const SUGGESTED_PLACES = [
     { id: 'tutoring', name: 'Reforço', icon: '🎨' },
     { id: 'grandma', name: 'Casa da Vovó', icon: '👵' },
 ];
+
+// Obtendo as dimensões da tela
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Definindo o tamanho dos cards de sugestão com base na largura da tela
+// Por exemplo, 22% da largura da tela para cada card, permitindo uns 4 cards visíveis com margem
+const suggestionCardWidth = screenWidth * 0.22;
+const suggestionCardHeight = suggestionCardWidth; // Para cards quadrados
 
 const FeatureCard = ({ iconName, iconType = FontAwesome, label, onPress }) => (
     <TouchableOpacity style={styles.featureCard} onPress={onPress}>
@@ -62,8 +73,13 @@ const HomeScreen = () => {
         alert('Funcionalidade "Histórico" em desenvolvimento!');
     };
 
+    const handleNavigateToChildProfile = () => {
+        console.log('Navegar para Perfil dos Filhos');
+        alert('Funcionalidade "Perfil dos Filhos" em desenvolvimento!');
+    };
+
     const scrollViewStyle = StyleSheet.compose(styles.container, {
-        marginTop: Platform.OS === 'android' ? -StatusBar.currentHeight : -10, // Ajuste o valor -10 para iOS se necessário
+        marginTop: Platform.OS === 'android' ? -StatusBar.currentHeight : -10,
     });
 
     return (
@@ -92,7 +108,7 @@ const HomeScreen = () => {
                         {SUGGESTED_PLACES.map(place => (
                             <TouchableOpacity key={place.id} style={styles.suggestionCard}>
                                 <Text style={styles.suggestionIcon}>{place.icon}</Text>
-                                <Text style={styles.suggestionText}>{place.name}</Text>
+                                <Text style={styles.suggestionText} numberOfLines={2} ellipsizeMode="tail">{place.name}</Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>
@@ -100,7 +116,7 @@ const HomeScreen = () => {
 
                 {/* Mascote */}
                 <Image
-                    source={require('./assets/mascot_placeholder.png')}
+                    source={require('./assets/search.png')}
                     style={styles.mascot}
                     resizeMode="contain"
                 />
@@ -111,24 +127,47 @@ const HomeScreen = () => {
 
                 {/* Cards de Ações */}
                 <View style={styles.cardsContainer}>
-                    <FeatureCard
-                        iconName="map-marker"
-                        iconType={FontAwesome}
-                        label="Agendar Corrida"
-                        onPress={handleNavigateToScheduleRide}
-                    />
-                    <FeatureCard
-                        iconName="users"
-                        iconType={FontAwesome}
-                        label="Ver Motoristas"
-                        onPress={handleNavigateToDrivers}
-                    />
-                    <FeatureCard
-                        iconName="list-alt"
-                        iconType={FontAwesome}
-                        label="Histórico"
-                        onPress={handleNavigateToHistory}
-                    />
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: COLORS.babyBlueLight }]}
+                        onPress={handleNavigateToScheduleRide} // Mantém a navegação original
+                    >
+                        <Image
+                            source={require('./assets/agendar.png')} // Ícone atualizado
+                            style={styles.actionButtonIconImage}
+                        />
+                        <Text style={styles.actionButtonLabel}>Agendar Corrida</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: COLORS.babyBlueLight }]}
+                        onPress={handleNavigateToChildProfile} // Nova função para Perfil dos Filhos
+                    >
+                        <Image
+                            source={require('./assets/filho.png')} // Ícone atualizado
+                            style={styles.actionButtonIconImage}
+                        />
+                        <Text style={styles.actionButtonLabel}>Perfil dos Filhos</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: COLORS.babyBlueLight }]}
+                        onPress={() => alert('Funcionalidade "Configurações" em desenvolvimento!')} // Placeholder
+                    >
+                        <Image
+                            source={require('./assets/configs.png')} // Ícone atualizado
+                            style={styles.actionButtonIconImage}
+                        />
+                        <Text style={styles.actionButtonLabel}>Configurações</Text>
+                    </TouchableOpacity>
+                    {/* Novo Botão Suporte */}
+                    <TouchableOpacity
+                        style={[styles.actionButton, { backgroundColor: COLORS.babyBlueLight }]}
+                        onPress={() => alert('Funcionalidade "Suporte" em desenvolvimento!')} // Placeholder
+                    >
+                        <Image
+                            source={require('./assets/suporte.png')}
+                            style={styles.actionButtonIconImage}
+                        />
+                        <Text style={styles.actionButtonLabel}>Suporte</Text>
+                    </TouchableOpacity>
                 </View>
             </ScrollView>
 
@@ -158,7 +197,7 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        backgroundColor: COLORS.accent,
+        backgroundColor: COLORS.accent, // Mudado para accent para combinar com o fundo da safeArea
         paddingHorizontal: 16,
     },
     searchBarContainer: {
@@ -183,7 +222,7 @@ const styles = StyleSheet.create({
         flex: 1,
         height: '100%',
         fontSize: 16,
-        color: COLORS.secondary,
+        color: COLORS.secondary, // Mantido secondary para o placeholder, mas o texto digitado será primary
     },
     nowButton: {
         flexDirection: 'row',
@@ -209,16 +248,29 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
     },
     suggestionCard: {
-        alignItems: 'center',
-        marginRight: 20,
+        width: suggestionCardWidth,    // Largura dinâmica
+        height: suggestionCardHeight,   // Altura dinâmica (para ser quadrado)
+        backgroundColor: COLORS.accent, // Mantém o fundo branco (accent é #FFFFFF)
+        borderRadius: 8,                // Bordas arredondadas
+        marginRight: 15,                // Espaçamento entre os cards
+        padding: 8,                     // Espaçamento interno
+        alignItems: 'center',          // Centraliza conteúdo horizontalmente
+        justifyContent: 'center',       // Centraliza conteúdo verticalmente
+        borderWidth: 1,                 // Adiciona uma borda fina
+        borderColor: COLORS.primary,    // Define a cor da borda como preta (primary é #000000)
+        shadowColor: COLORS.cardShadow, // Sombra para iOS
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
     },
     suggestionIcon: {
-        fontSize: 24,
+        fontSize: suggestionCardWidth * 0.3, // Tamanho do ícone proporcional ao card
         marginBottom: 5,
     },
     suggestionText: {
-        marginTop: 5,
         color: COLORS.primary,
+        fontSize: suggestionCardWidth * 0.14, // Tamanho da fonte proporcional
+        textAlign: 'center', // Centraliza o texto se ele quebrar linha
     },
     mascot: {
         width: 100,
@@ -244,18 +296,27 @@ const styles = StyleSheet.create({
         marginTop: 20,
         marginBottom: 20,
     },
-    featureCard: {
-        backgroundColor: COLORS.accent,
+    actionButton: {
         borderRadius: 8,
-        padding: 16,
+        paddingVertical: 16, // Mantém o padding vertical
+        paddingHorizontal: 16, // Mantém o padding horizontal
         marginBottom: 12,
         flexDirection: 'row',
         alignItems: 'center',
+        height: 70,
+        borderWidth: 1, // Adiciona uma borda
+        // backgroundColor: COLORS.babyBlueLight, // Remove o fundo sólido
     },
-    featureCardIcon: {
+    actionButtonIcon: {
         marginRight: 12,
     },
-    featureCardLabel: {
+    actionButtonIconImage: {
+        width: 100, // Ajustado para ser igual à altura para ícones quadrados, ou ajuste conforme a proporção
+        height: 100, // Aumentamos a altura do ícone
+        marginRight: 12,
+        resizeMode: 'contain', // Garante que a imagem caiba sem cortar, mantendo a proporção
+    },
+    actionButtonLabel: {
         fontSize: 16,
         color: COLORS.primary,
     },
@@ -269,6 +330,8 @@ const styles = StyleSheet.create({
     },
     bottomNavItem: {
         alignItems: 'center',
+        flex: 1,
+        justifyContent: 'center',
     },
     bottomNavItemText: {
         fontSize: 12,
