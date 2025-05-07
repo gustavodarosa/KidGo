@@ -29,12 +29,12 @@ const COLORS = {
 };
 
 const SUGGESTED_PLACES = [
-    { id: 'school', name: 'Escola', icon: '🏫' },
-    { id: 'home', name: 'Casa', icon: '🏠' },
-    { id: 'swimming', name: 'Natação', icon: '🧸' },
-    { id: 'tutoring', name: 'Reforço', icon: '🎨' },
-    { id: 'grandma', name: 'Casa da Vovó', icon: '👵' },
+    { id: 'school', name: 'Escola', icon: require('./assets/escola.png') },
+    { id: 'home', name: 'Casa', icon: require('./assets/casa.png') },
+    { id: 'swimming', name: 'Natação', icon: require('./assets/natacao.png') },
+    { id: 'grandma', name: 'Casa da Vovó', icon: require('./assets/vovo.png') },
 ];
+SUGGESTED_PLACES.push({ id: 'snack', name: 'Lanchinho', icon: require('./assets/lanche.png') });
 
 // Obtendo as dimensões da tela
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -107,7 +107,13 @@ const HomeScreen = () => {
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestionsScroll}>
                         {SUGGESTED_PLACES.map(place => (
                             <TouchableOpacity key={place.id} style={styles.suggestionCard}>
-                                <Text style={styles.suggestionIcon}>{place.icon}</Text>
+                                <View style={styles.suggestionIconContainer}> 
+                                    {typeof place.icon === 'string' ? (
+                                        <Text style={styles.suggestionIcon}>{place.icon}</Text>
+                                    ) : (
+                                        <Image source={place.icon} style={styles.suggestionImage} resizeMode="contain" />
+                                    )}
+                                </View>
                                 <Text style={styles.suggestionText} numberOfLines={2} ellipsizeMode="tail">{place.name}</Text>
                             </TouchableOpacity>
                         ))}
@@ -209,11 +215,13 @@ const styles = StyleSheet.create({
         marginTop: 10,
         marginBottom: 20,
         height: 50,
-        elevation: 3,
-        shadowColor: COLORS.cardShadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
+        // elevation: 3, // Pode remover ou ajustar se a borda for suficiente
+        // shadowColor: COLORS.cardShadow,
+        // shadowOffset: { width: 0, height: 2 },
+        // shadowOpacity: 0.1,
+        // shadowRadius: 3,
+        borderWidth: 1, // Adiciona uma borda fina
+        borderColor: COLORS.primary, // Define a cor da borda como preta
     },
     searchIcon: {
         marginRight: 10,
@@ -235,8 +243,9 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     suggestionsSection: {
-        marginTop: 20,
+        marginTop: 30, // Aumentada a margem superior da seção de sugestões
         marginBottom: 20,
+        overflow: 'visible', // Permite que o conteúdo interno transborde visualmente
     },
     sectionTitle: {
         fontSize: 18,
@@ -252,16 +261,23 @@ const styles = StyleSheet.create({
         height: suggestionCardHeight,   // Altura dinâmica (para ser quadrado)
         backgroundColor: COLORS.accent, // Mantém o fundo branco (accent é #FFFFFF)
         borderRadius: 8,                // Bordas arredondadas
-        marginRight: 15,                // Espaçamento entre os cards
+        marginRight: 15,                // Espaçamento horizontal entre os cards
+        paddingBottom: 2,               // Adiciona uma margem inferior interna ao card
         padding: 8,                     // Espaçamento interno
         alignItems: 'center',          // Centraliza conteúdo horizontalmente
-        justifyContent: 'center',       // Centraliza conteúdo verticalmente
-        borderWidth: 1,                 // Adiciona uma borda fina
+        // justifyContent: 'center',    // Removido para permitir que o texto fique mais abaixo
+        borderWidth: 1.2,                 // Aumenta a espessura da borda
         borderColor: COLORS.primary,    // Define a cor da borda como preta (primary é #000000)
         shadowColor: COLORS.cardShadow, // Sombra para iOS
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
+    },
+    suggestionIconContainer: { // Novo container para o ícone/imagem
+        flex: 1, // Faz este container ocupar o espaço vertical disponível
+        justifyContent: 'center', // Centraliza o ícone/imagem dentro deste container
+        alignItems: 'center',
+        width: '100%', // Garante que o container do ícone ocupe toda a largura do card
     },
     suggestionIcon: {
         fontSize: suggestionCardWidth * 0.3, // Tamanho do ícone proporcional ao card
@@ -271,6 +287,11 @@ const styles = StyleSheet.create({
         color: COLORS.primary,
         fontSize: suggestionCardWidth * 0.14, // Tamanho da fonte proporcional
         textAlign: 'center', // Centraliza o texto se ele quebrar linha
+    },
+    suggestionImage: { // Novo estilo para imagens nos cards de sugestão
+        width: suggestionCardWidth *0.8, // Reduzir um pouco para melhor controle dentro do card
+        height: suggestionCardWidth * 0.8, // Reduzir um pouco para melhor controle dentro do card
+        marginBottom: 8, // Aumentar a margem para separar mais do texto
     },
     mascot: {
         width: 100,
@@ -300,19 +321,19 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         paddingVertical: 16, // Mantém o padding vertical
         paddingHorizontal: 16, // Mantém o padding horizontal
-        marginBottom: 12,
+        marginBottom: 20, // Aumenta o espaçamento inferior entre os botões
         flexDirection: 'row',
         alignItems: 'center',
         height: 70,
-        borderWidth: 1, // Adiciona uma borda
+        borderWidth: 1.2, // Adiciona uma borda
         // backgroundColor: COLORS.babyBlueLight, // Remove o fundo sólido
     },
     actionButtonIcon: {
         marginRight: 12,
     },
     actionButtonIconImage: {
-        width: 100, // Ajustado para ser igual à altura para ícones quadrados, ou ajuste conforme a proporção
-        height: 100, // Aumentamos a altura do ícone
+        width: 90, // Ajuste para um tamanho visualmente maior dentro do botão
+        height: 90, // Ajuste para um tamanho visualmente maior dentro do botão
         marginRight: 12,
         resizeMode: 'contain', // Garante que a imagem caiba sem cortar, mantendo a proporção
     },
