@@ -2,230 +2,151 @@ import React, { useState } from 'react';
 import {
     View,
     Text,
-    TextInput,
     TouchableOpacity,
     StyleSheet,
-    FlatList,
     ScrollView,
     Image,
+    TextInput,
+    Platform,
+    StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 
-// --- Placeholder Data ---
-const SAVED_PLACES = [
-    { id: 'home', name: 'Home' },
-    { id: 'school', name: 'School' },
-    { id: 'daycare', name: 'Daycare' },
+const COLORS = {
+    backgroundLightGray: '#F9F9F9',
+    primary: '#000000',
+    secondary: '#888888',
+    accent: '#FFFFFF',
+    lightGray: '#EEEEEE',
+    cardShadow: '#000',
+};
+
+const SUGGESTED_PLACES = [
+    { id: 'school', name: 'Escola', icon: '🏫' },
+    { id: 'home', name: 'Casa', icon: '🏠' },
+    { id: 'swimming', name: 'Natação', icon: '🧸' },
+    { id: 'tutoring', name: 'Reforço', icon: '🎨' },
+    { id: 'grandma', name: 'Casa da Vovó', icon: '👵' },
 ];
 
-const CHILDREN = [
-    { id: '1', name: 'Alice', age: 5, carSeat: 'Booster' },
-    { id: '2', name: 'Bob', age: 2, carSeat: 'Infant' },
-];
+const FeatureCard = ({ iconName, iconType = FontAwesome, label, onPress }) => (
+    <TouchableOpacity style={styles.featureCard} onPress={onPress}>
+        {iconType === FontAwesome ? (
+            <FontAwesome name={iconName} size={22} color={COLORS.primary} style={styles.featureCardIcon} />
+        ) : (
+            <Ionicons name={iconName} size={22} color={COLORS.primary} style={styles.featureCardIcon} />
+        )}
+        <Text style={styles.featureCardLabel}>{label}</Text>
+    </TouchableOpacity>
+);
 
 const HomeScreen = () => {
-    const [destination, setDestination] = useState('');
-    const [selectedChildren, setSelectedChildren] = useState([]);
-    const [carSeatConfirmed, setCarSeatConfirmed] = useState(false);
+    const [searchText, setSearchText] = useState('');
     const navigation = useNavigation();
 
-    const handleDestinationChange = (text) => {
-        setDestination(text);
-        // TODO: Implement address autocomplete here
-    };
-
-    const handleSelectChild = (childId) => {
-        setSelectedChildren((prev) =>
-            prev.includes(childId)
-                ? prev.filter((id) => id !== childId)
-                : [...prev, childId]
-        );
-    };
-
-    const handleConfirmCarSeat = () => {
-        setCarSeatConfirmed(true);
-    };
-
-    const handleRequestRide = () => {
-        if (selectedChildren.length === 0) {
-            alert('Please select at least one child.');
-            return;
-        }
-        if (!carSeatConfirmed) {
-            alert('Please confirm car seat availability.');
-            return;
-        }
-        // TODO: Implement ride request logic
-        console.log(
-            'Requesting ride to:',
-            destination,
-            'for children:',
-            selectedChildren
-        );
-    };
-
-    const handleGoToScheduledRides = () => {
+    const handleNavigateToScheduleRide = () => {
         navigation.navigate('ScheduleRide');
     };
 
-    const getCarSeatRequirements = () => {
-        if (selectedChildren.length === 0) {
-            return 'No children selected';
-        }
-        const requirements = selectedChildren.map(
-            (childId) =>
-                CHILDREN.find((child) => child.id === childId)?.carSeat
-        );
-        const uniqueRequirements = [...new Set(requirements)];
-        return `Car Seat(s): ${uniqueRequirements.join(', ')}`;
+    const handleNavigateToDrivers = () => {
+        console.log('Navegar para Ver Motoristas');
+        alert('Funcionalidade "Ver Motoristas" em desenvolvimento!');
     };
+
+    const handleNavigateToHistory = () => {
+        console.log('Navegar para Histórico');
+        alert('Funcionalidade "Histórico" em desenvolvimento!');
+    };
+
+    const scrollViewStyle = StyleSheet.compose(styles.container, {
+        marginTop: Platform.OS === 'android' ? -StatusBar.currentHeight : -10, // Ajuste o valor -10 para iOS se necessário
+    });
 
     return (
         <SafeAreaView style={styles.safeArea}>
-            <ScrollView style={styles.container}>
-                {/* 1. "Where to?" Input (Rounded) */}
-                <View style={styles.searchContainer}>
-                    <FontAwesome
-                        name="search"
-                        size={20}
-                        color="gray"
-                        style={styles.searchIcon}
-                    />
+            <ScrollView style={scrollViewStyle}>
+                {/* Barra de Pesquisa */}
+                <View style={styles.searchBarContainer}>
+                    <FontAwesome name="search" size={20} color={COLORS.secondary} style={styles.searchIcon} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Where to?"
-                        value={destination}
-                        onChangeText={handleDestinationChange}
+                        placeholder="Pra onde vamos levar hoje?"
+                        value={searchText}
+                        onChangeText={setSearchText}
+                        placeholderTextColor={COLORS.secondary}
                     />
+                    <TouchableOpacity style={styles.nowButton}>
+                        <Ionicons name="time-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.nowButtonText}>Agora</Text>
+                    </TouchableOpacity>
                 </View>
 
-                {/* 2. Child Selection (Icons with Text) */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Who is riding?</Text>
-                    <FlatList
-                        data={CHILDREN}
-                        horizontal
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity
-                                style={[
-                                    styles.childOptionContainer,
-                                    selectedChildren.includes(item.id) &&
-                                        styles.selectedChildOptionContainer,
-                                ]}
-                                onPress={() => handleSelectChild(item.id)}
-                            >
-                                <Image
-                                    source={require('./assets/child_icon.png')} // Replace with your icon
-                                    style={styles.childIcon}
-                                />
-                                <Text style={styles.childOptionText}>{item.name}</Text>
+                {/* Sugestões */}
+                <View style={styles.suggestionsSection}>
+                    <Text style={styles.sectionTitle}>Sugestões</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestionsScroll}>
+                        {SUGGESTED_PLACES.map(place => (
+                            <TouchableOpacity key={place.id} style={styles.suggestionCard}>
+                                <Text style={styles.suggestionIcon}>{place.icon}</Text>
+                                <Text style={styles.suggestionText}>{place.name}</Text>
                             </TouchableOpacity>
-                        )}
+                        ))}
+                    </ScrollView>
+                </View>
+
+                {/* Mascote */}
+                <Image
+                    source={require('./assets/mascot_placeholder.png')}
+                    style={styles.mascot}
+                    resizeMode="contain"
+                />
+
+                {/* Título e Subtítulo */}
+                <Text style={styles.title}>Olá, Gustavo!</Text>
+                <Text style={styles.subtitle}>O que deseja fazer hoje?</Text>
+
+                {/* Cards de Ações */}
+                <View style={styles.cardsContainer}>
+                    <FeatureCard
+                        iconName="map-marker"
+                        iconType={FontAwesome}
+                        label="Agendar Corrida"
+                        onPress={handleNavigateToScheduleRide}
                     />
-                </View>
-
-                {/* 3. Car Seat Verification */}
-                {selectedChildren.length > 0 && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>
-                            {getCarSeatRequirements()}
-                        </Text>
-                        {!carSeatConfirmed ? (
-                            <TouchableOpacity
-                                style={styles.confirmButton}
-                                onPress={handleConfirmCarSeat}
-                            >
-                                <Text style={styles.confirmButtonText}>
-                                    Confirm Car Seat
-                                </Text>
-                            </TouchableOpacity>
-                        ) : (
-                            <Text style={styles.confirmationText}>
-                                Car Seat Confirmed
-                            </Text>
-                        )}
-                    </View>
-                )}
-
-                {/* 4. Request Ride */}
-                <TouchableOpacity
-                    style={styles.requestButton}
-                    onPress={handleRequestRide}
-                    disabled={!destination || selectedChildren.length === 0 || !carSeatConfirmed}
-                >
-                    <Text style={styles.requestButtonText}>Request Ride</Text>
-                </TouchableOpacity>
-
-                {/* 5. Scheduled Rides */}
-                <TouchableOpacity
-                    style={styles.scheduleButton}
-                    onPress={handleGoToScheduledRides}
-                >
-                    <Text style={styles.scheduleButtonText}>
-                        Scheduled Rides
-                    </Text>
-                </TouchableOpacity>
-
-                {/* 6. Saved Places/Recent Destinations (Icons with Text) */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Saved Places</Text>
-                    <FlatList
-                        data={SAVED_PLACES}
-                        horizontal
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => (
-                            <TouchableOpacity style={styles.savedPlaceContainer}>
-                                <FontAwesome
-                                    name="map-marker"
-                                    size={24}
-                                    color="black"
-                                    style={styles.savedPlaceIcon}
-                                />
-                                <Text style={styles.savedPlaceText}>{item.name}</Text>
-                            </TouchableOpacity>
-                        )}
+                    <FeatureCard
+                        iconName="users"
+                        iconType={FontAwesome}
+                        label="Ver Motoristas"
+                        onPress={handleNavigateToDrivers}
                     />
-                </View>
-
-                {/* 7. Trip Cost Estimation (Placeholder) */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>
-                        Estimated Cost: (Placeholder)
-                    </Text>
-                    <Text>Cost will be calculated after ride details are confirmed.</Text>
-                </View>
-
-                {/* 8. Safety Features Highlight (Placeholder) */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>
-                        Safety Features (Placeholder)
-                    </Text>
-                    <Text>
-                        KidGo prioritizes your child's safety with background-checked
-                        drivers, car seat verification, and ride tracking.
-                    </Text>
-                </View>
-
-                {/* 9. Bottom Navigation Bar (Placeholder) */}
-                <View style={styles.bottomNav}>
-                    <TouchableOpacity style={styles.bottomNavItem}>
-                        <Ionicons name="home-outline" size={24} color="black" />
-                        <Text>Home</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.bottomNavItem}>
-                        <Ionicons name="calendar-outline" size={24} color="black" />
-                        <Text>Schedule</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.bottomNavItem}>
-                        <Ionicons name="person-outline" size={24} color="black" />
-                        <Text>Profile</Text>
-                    </TouchableOpacity>
+                    <FeatureCard
+                        iconName="list-alt"
+                        iconType={FontAwesome}
+                        label="Histórico"
+                        onPress={handleNavigateToHistory}
+                    />
                 </View>
             </ScrollView>
+
+            {/* Barra de Navegação Inferior */}
+            <View style={styles.bottomNav}>
+                <TouchableOpacity style={styles.bottomNavItem}>
+                    <FontAwesome name="home" size={24} color={COLORS.primary} />
+                    <Text style={styles.bottomNavItemText}>Home</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.bottomNavItem}>
+                    <Ionicons name="calendar-outline" size={24} color={COLORS.primary} />
+                    <Text style={styles.bottomNavItemText}>Schedule</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.bottomNavItem}>
+                    <FontAwesome name="user" size={24} color={COLORS.primary} />
+                    <Text style={styles.bottomNavItemText}>Profile</Text>
+                </TouchableOpacity>
+            </View>
         </SafeAreaView>
     );
 };
@@ -233,127 +154,125 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
     safeArea: {
         flex: 1,
+        backgroundColor: COLORS.backgroundLightGray,
     },
     container: {
         flex: 1,
-        padding: 20,
+        backgroundColor: COLORS.accent,
+        paddingHorizontal: 16,
     },
-    // Search Bar
-    searchContainer: {
+    searchBarContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f0f0f0',
-        borderRadius: 24,
+        backgroundColor: COLORS.accent,
+        borderRadius: 25,
         paddingHorizontal: 15,
-        marginBottom: 16,
+        marginTop: 10,
+        marginBottom: 20,
+        height: 50,
+        elevation: 3,
+        shadowColor: COLORS.cardShadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 3,
     },
     searchIcon: {
         marginRight: 10,
     },
     searchInput: {
         flex: 1,
-        height: 48,
+        height: '100%',
+        fontSize: 16,
+        color: COLORS.secondary,
     },
-    section: {
+    nowButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingLeft: 10,
+    },
+    nowButtonText: {
+        marginLeft: 5,
+        color: COLORS.primary,
+        fontWeight: '600',
+    },
+    suggestionsSection: {
+        marginTop: 20,
         marginBottom: 20,
     },
     sectionTitle: {
         fontSize: 18,
         fontWeight: 'bold',
+        color: COLORS.primary,
         marginBottom: 10,
     },
-    // Child Selection
-    childOptionContainer: {
+    suggestionsScroll: {
+        paddingVertical: 10,
+    },
+    suggestionCard: {
+        alignItems: 'center',
+        marginRight: 20,
+    },
+    suggestionIcon: {
+        fontSize: 24,
+        marginBottom: 5,
+    },
+    suggestionText: {
+        marginTop: 5,
+        color: COLORS.primary,
+    },
+    mascot: {
+        width: 100,
+        height: 100,
+        alignSelf: 'center',
+        marginTop: 20,
+        marginBottom: 20,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: COLORS.primary,
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    subtitle: {
+        fontSize: 16,
+        color: COLORS.secondary,
+        textAlign: 'center',
+        marginBottom: 25,
+    },
+    cardsContainer: {
+        marginTop: 20,
+        marginBottom: 20,
+    },
+    featureCard: {
+        backgroundColor: COLORS.accent,
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 12,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#eee',
-        borderRadius: 16,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        marginRight: 8,
     },
-    selectedChildOptionContainer: {
-        backgroundColor: 'blue',
+    featureCardIcon: {
+        marginRight: 12,
     },
-    childIcon: {
-        width: 24,
-        height: 24,
-        marginRight: 8,
-    },
-    childOptionText: {
-        color: 'black',
-        fontWeight: 'normal',
+    featureCardLabel: {
         fontSize: 16,
+        color: COLORS.primary,
     },
-    selectedChildOptionText: {
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    // Car Seat Verification
-    confirmButton: {
-        backgroundColor: 'orange',
-        paddingVertical: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    confirmButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
-    },
-    confirmationText: {
-        color: 'green',
-        fontWeight: 'bold',
-    },
-    // Saved Places
-    savedPlaceContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f0f0f0',
-        borderRadius: 16,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        marginRight: 8,
-    },
-    savedPlaceIcon: {
-        marginRight: 8,
-    },
-    savedPlaceText: {
-        fontSize: 16,
-    },
-    // Buttons
-    scheduleButton: {
-        backgroundColor: '#ddd',
-        paddingVertical: 12,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    scheduleButtonText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    requestButton: {
-        backgroundColor: 'green',
-        paddingVertical: 16,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    requestButtonText: {
-        color: 'white',
-        fontSize: 18,
-        fontWeight: 'bold',
-    },
-    // Bottom Navigation
     bottomNav: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        backgroundColor: '#f0f0f0',
+        backgroundColor: COLORS.accent,
         paddingVertical: 10,
         borderTopWidth: 1,
-        borderTopColor: 'lightgray',
+        borderTopColor: COLORS.lightGray,
     },
     bottomNavItem: {
         alignItems: 'center',
+    },
+    bottomNavItemText: {
+        fontSize: 12,
+        color: COLORS.primary,
     },
 });
 
