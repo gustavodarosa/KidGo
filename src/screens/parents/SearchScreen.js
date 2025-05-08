@@ -13,8 +13,9 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
-import { MAPBOX_ACCESS_TOKEN } from '@env';
+import * as Location from 'expo-location'; // Manter para obter localização do usuário
+import * as Crypto from 'expo-crypto'; // Importar expo-crypto para UUID
+import { GOOGLE_PLACES_API_KEY } from '@env'; // Mudar para a chave do Google
 
 // --- Funções de Distância (Haversine) ---
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -40,6 +41,7 @@ const SearchScreen = () => {
     const [searchText, setSearchText] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [currentLocation, setCurrentLocation] = useState(null);
+    const [googleSessionToken, setGoogleSessionToken] = useState(null); // Renomeado para clareza
     
     const [isLoadingLocation, setIsLoadingLocation] = useState(true); // Novo estado para loading da localização
     const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
@@ -133,97 +135,140 @@ const SearchScreen = () => {
         requestLocation();
     }, [requestLocation]); // Adicionar requestLocation como dependência
 
+    // Gerar session_token na montagem
+    useEffect(() => {
+        const newSessionToken = Crypto.randomUUID();
+        setGoogleSessionToken(newSessionToken);
+        console.log("[EFFECT_SESSION_TOKEN] Google Places session token gerado:", newSessionToken);
+    }, []);
+
     // 2. Buscar Sugestões quando searchText ou currentLocation mudar (com debounce)
-    const fetchMapboxSuggestions = useCallback(async (textToSearch, locationToUse) => {
-        if (!textToSearch || textToSearch.length < 3) {
+    const fetchGooglePlacesSuggestions = useCallback(async (textToSearch, locationToUse, currentGoogleSessionToken) => {
+        if (!textToSearch || textToSearch.length < 3 || !currentGoogleSessionToken) {
             setSuggestions([]);
             return;
         }
 
-        console.log(`[API_MAPBOX] Iniciando busca por: "${textToSearch}". Usando localização:`, locationToUse);
+        console.log(`[API_GOOGLE_PLACES] Iniciando busca por: "${textToSearch}". Usando session token: ${currentGoogleSessionToken}`);
         setIsFetchingSuggestions(true);
-        let proximityParam = '';
-        if (locationToUse) {
-            proximityParam = `&proximity=${locationToUse.longitude},${locationToUse.latitude}`;
-            console.log(`[API_MAPBOX] Parâmetro de proximidade: ${proximityParam}`);
-        }
+        
 
         try {
-            if (!MAPBOX_ACCESS_TOKEN) {
-                console.error("[API_MAPBOX] ERRO FATAL: Token do Mapbox não configurado no .env!");
-                Alert.alert("Erro de Configuração", "O serviço de busca não está configurado corretamente.");
+            if (!GOOGLE_PLACES_API_KEY) {
+                console.error("[API_GOOGLE_PLACES] ERRO FATAL: Chave da API Google Places não configurada no .env!");
+                Alert.alert("Erro de Configuração", "O serviço de busca (Google) não está configurado corretamente.");
                 setSuggestions([]);
                 setIsFetchingSuggestions(false);
                 return;
             }
 
-            const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(textToSearch)}.json?access_token=${MAPBOX_ACCESS_TOKEN}&country=BR&types=poi,address,place,locality${proximityParam}&autocomplete=true`;
-            console.log("[API_MAPBOX] URL da requisição:", url);
+            let locationParamsForTextSearch = '';
+            if (locationToUse) {
+                // Para Text Search, location e radius são parâmetros importantes
+                // Usaremos um raio de 8km (8000m) como no exemplo, pode ser ajustado.
+                locationParamsForTextSearch = `&location=${locationToUse.latitude},${locationToUse.longitude}&radius=8000`; 
+                console.log(`[API_GOOGLE_PLACES_TEXT_SEARCH] Parâmetros de localização (raio 8km): ${locationParamsForTextSearch}`);
+            }
+
+            // Mudando para a API Text Search
+            // O sessiontoken não é usado com Text Search.
+            // O parâmetro 'types=establishment' pode ser removido ou mantido dependendo do foco desejado.
+            // Para "qualquer coisa com o nome", vamos remover 'types' por enquanto.
+            let url;
+            url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(textToSearch)}&key=${GOOGLE_PLACES_API_KEY}&language=pt${locationParamsForTextSearch}`;
+            
+            console.log("[API_GOOGLE_PLACES] URL da requisição:", url);
 
             const response = await fetch(url);
-            console.log(`[API_MAPBOX] Resposta da API - Status: ${response.status}, OK: ${response.ok}`);
+            console.log(`[API_GOOGLE_PLACES] Resposta da API - Status: ${response.status}, OK: ${response.ok}`);
 
             const data = await response.json();
-            console.log("[API_MAPBOX] Dados brutos da API:", JSON.stringify(data, null, 2)); // Loga o JSON completo formatado
+            console.log("[API_GOOGLE_PLACES] Dados brutos da API (Autocomplete):", JSON.stringify(data, null, 2));
 
-            if (data.features && data.features.length > 0) {
-                console.log(`[API_MAPBOX] ${data.features.length} features encontradas. Mapeando e calculando distâncias...`);
-                const suggestionsWithDistance = data.features.map(feature => {
+            if (data.results && data.status === 'OK') {
+                console.log(`[API_GOOGLE_PLACES_TEXT_SEARCH] ${data.results.length} resultados encontrados. Mapeando...`);
+                
+                // Com Text Search, os resultados já contêm geometria, então não precisamos de chamadas de Details para cada um.
+                const processedSuggestions = data.results.map(result => {
                     let distance = null;
-                    if (locationToUse && feature.center && typeof feature.center[0] === 'number' && typeof feature.center[1] === 'number') {
-                        distance = getDistance(
-                            locationToUse.latitude,
-                            locationToUse.longitude,
-                            feature.center[1], // latitude
-                            feature.center[0]  // longitude
-                        );
+                    let placeTypes = result.types || [];
+
+                    if (result.geometry?.location) {
+                        const { lat, lng } = result.geometry.location;
+                        if (locationToUse) {
+                            distance = getDistance(
+                                locationToUse.latitude,
+                                locationToUse.longitude,
+                                lat,
+                                lng
+                            );
+                            console.log(`[DISTANCE_CALC] Distância para "${result.name}": ${distance?.toFixed(2)} km`);
+                        }
+                    } else {
+                        console.warn(`[API_GOOGLE_PLACES_TEXT_SEARCH] Geometria não encontrada para place_id: ${result.place_id}`);
                     }
-                    return { 
-                        id: feature.id, 
-                        description: feature.place_name, 
-                        details: feature,
-                        distance: distance 
+
+                    return {
+                        id: result.place_id,
+                        name: result.name,
+                        address: result.formatted_address || '', // Usar formatted_address
+                        description: result.name, // Para exibição principal, podemos usar o nome.
+                                                // Ou combinar nome e endereço se preferir uma descrição mais longa.
+                        details: result, // Guardar o objeto de resultado completo da Text Search
+                        distance: distance,
+                        placeTypes: placeTypes, // Adiciona os tipos do local
                     };
-                }).sort((a, b) => { // Ordena aqui mesmo se locationToUse for null (nulos no final)
-                    if (a.distance === null && b.distance === null) return 0;
-                    if (a.distance === null) return 1; 
-                    if (b.distance === null) return -1;
-                    return a.distance - b.distance;
+                }).sort((a, b) => { // Ordenar estritamente por distância
+                    if (a.distance === null && b.distance === null) {
+                        return 0; // Mesma ordem se nenhuma distância
+                    }
+                    if (a.distance === null) {
+                        return 1; // a (sem distância) vai para o fim
+                    }
+                    if (b.distance === null) {
+                        return -1; // b (sem distância) vai para o fim, então a vem antes
+                    }
+                    return a.distance - b.distance; // Ordena pela distância
                 });
-                setSuggestions(suggestionsWithDistance);
-                console.log("[API_MAPBOX] Sugestões processadas e ordenadas:", suggestionsWithDistance.length);
+
+                setSuggestions(processedSuggestions);
+                console.log("[API_GOOGLE_PLACES_TEXT_SEARCH] Sugestões processadas e ordenadas por distância:", processedSuggestions.length);
             } else {
-                console.log("[API_MAPBOX] Nenhuma feature encontrada na resposta da API ou array de features vazio.");
+                console.warn(`[API_GOOGLE_PLACES] Nenhuma predição encontrada ou status não OK. Status: ${data.status}, Error: ${data.error_message}`);
                 setSuggestions([]);
             }
         } catch (error) {
-            console.error('[API_MAPBOX] ERRO ao buscar ou processar sugestões:', error);
-            Alert.alert("Erro na Busca", "Ocorreu um erro ao buscar sugestões. Tente novamente.");
+            console.error('[API_GOOGLE_PLACES] ERRO ao buscar ou processar sugestões:', error);
+            Alert.alert("Erro na Busca", "Ocorreu um erro ao buscar sugestões (Google). Verifique sua conexão e tente novamente.");
             setSuggestions([]);
         } finally { // finally para garantir que o loading seja desativado
-            console.log("[API_MAPBOX] Finalizada tentativa de busca de sugestões. isFetchingSuggestions:", false);
             setIsFetchingSuggestions(false);
+            console.log("[API_GOOGLE_PLACES] Finalizada tentativa de busca de sugestões. isFetchingSuggestions:", false);
         }
-    }, []); // useCallback para otimizar, dependências serão gerenciadas pelo useEffect abaixo
+    }, []); // googleSessionToken será passado como argumento
 
     useEffect(() => {
         const debounceTimer = setTimeout(() => {
             // Só busca se não estiver carregando a localização inicial E o texto for válido
             console.log(`[EFFECT_SEARCH] Verificando condições para busca: isLoadingLocation=${isLoadingLocation}, searchText.length=${searchText.length}`);
-            if (!isLoadingLocation && searchText.length > 2) {
-                console.log("[EFFECT_SEARCH] Condições atendidas. Chamando fetchMapboxSuggestions.");
-                fetchMapboxSuggestions(searchText, currentLocation);
-            } else if (searchText.length <= 2) {
+            if (searchText.length <= 2) {
                 console.log("[EFFECT_SEARCH] Texto muito curto ou ainda carregando localização. Limpando sugestões.");
                 setSuggestions([]); // Limpa se o texto for muito curto
+                return;
+            }
+
+            if (!isLoadingLocation) {
+                // Agora usamos diretamente o searchText, sem adicionar "escola"
+                console.log(`[EFFECT_SEARCH] Usando termo de busca original: "${searchText}"`);
+                fetchGooglePlacesSuggestions(searchText, currentLocation, googleSessionToken);
             }
         }, 500); // Debounce de 500ms
         console.log(`[EFFECT_SEARCH] Debounce timer configurado para searchText: "${searchText}"`);
         return () => {
             console.log(`[EFFECT_SEARCH] Limpando debounce timer para searchText: "${searchText}"`);
             clearTimeout(debounceTimer);
-        }
-    }, [searchText, currentLocation, isLoadingLocation, fetchMapboxSuggestions]);
+        } // fetchGooglePlacesSuggestions não precisa ser dependência se não usar nada do escopo do useEffect
+    }, [searchText, currentLocation, isLoadingLocation, googleSessionToken, fetchGooglePlacesSuggestions]);
 
 
     // 3. Renderizar Itens da Lista
@@ -232,36 +277,36 @@ const SearchScreen = () => {
             style={styles.suggestionItem} 
             onPress={() => {
                 console.log("[ITEM_PRESS] Sugestão selecionada:", JSON.stringify(item, null, 2));
-                // Ação ao selecionar: ex: navigation.navigate('ScheduleRide', { destination: item.details })
-                // Ou preencher o campo de busca e limpar sugestões:
-                // setSearchText(item.description);
-                // setSuggestions([]);
+                // Navegar para ScheduleRide, passando o mapbox_id e outros detalhes.
+                // A ScheduleRideScreen precisará usar o item.id (que é o place_id)
+                // para fazer uma chamada à Google Places Details API para obter coordenadas.
+                navigation.navigate('ScheduleRide', { 
+                    selectedPlaceId: item.id, // place_id do Google
+                    selectedPlaceDescription: item.description, // Descrição para exibição rápida
+                });
             }}
         >
-            <Ionicons name="location-outline" size={20} color="gray" style={styles.suggestionIcon} />
-            <View style={styles.suggestionTextContainer}>
-                <Text style={styles.suggestionDescription} numberOfLines={2}>{item.description}</Text>
+            {/* Container para Ícone e Distância (à esquerda) */}
+            <View style={styles.leftInfoContainer}>
+                {/* Ícone agora à esquerda da distância */}
+                <Ionicons name="location-outline" size={18} color="#8E8E93" style={styles.locationIconLeft} />
                 {typeof item.distance === 'number' && !isNaN(item.distance) && (
-                    <Text style={styles.suggestionDistance}>
-                        {item.distance < 1 ? `${(item.distance * 1000).toFixed(0)} m` : `${item.distance.toFixed(1)} km`}
+                    <Text style={styles.distanceTextLeft}>
+                        {item.distance < 1 ? `${Math.round(item.distance * 1000)} m` : `${item.distance.toFixed(1)} km`}
                     </Text>
                 )}
+            </View>
+
+            {/* Descrição do Local (ocupa o restante do espaço) */}
+            <View style={styles.descriptionWrapper}>
+                <Text style={styles.descriptionTextMain} numberOfLines={1}>{item.name}</Text> 
+                {item.address ? <Text style={styles.addressText} numberOfLines={1}>{item.address}</Text> : null}
             </View>
         </TouchableOpacity>
     );
 
     // 4. Renderizar Conteúdo Principal e Placeholders
     const renderContent = () => {
-        if (isLoadingLocation) {
-            console.log("[RENDER_CONTENT] Renderizando: isLoadingLocation");
-            return (
-                <View style={styles.placeholderContainer}>
-                    <ActivityIndicator size="large" color="#007AFF" />
-                    <Text style={styles.placeholderText}>Obtendo sua localização...</Text>
-                </View>
-            );
-        }
-
         if (locationError && !searchText) { // Mostra erro de localização se não estiver buscando
             console.log("[RENDER_CONTENT] Renderizando: locationError (sem busca ativa)");
              return (
@@ -276,6 +321,16 @@ const SearchScreen = () => {
             );
         }
         
+        // Movido para depois do locationError para que o erro de localização tenha prioridade se não houver busca
+        if (isLoadingLocation) {
+            console.log("[RENDER_CONTENT] Renderizando: isLoadingLocation");
+            return (
+                <View style={styles.placeholderContainer}>
+                    <ActivityIndicator size="large" color="#007AFF" />
+                    <Text style={styles.placeholderText}>Obtendo sua localização...</Text>
+                </View>
+            );
+        }
         if (searchText.length > 2 && isFetchingSuggestions) {
             console.log("[RENDER_CONTENT] Renderizando: isFetchingSuggestions");
             return (
@@ -389,25 +444,32 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: '#EDEDED', // Borda mais suave
     },
-    suggestionIcon: {
-        marginRight: 12, // Mais espaço para o ícone
-        color: '#007AFF', // Cor do ícone
-    },
-    suggestionTextContainer: { 
-        flex: 1, 
+    leftInfoContainer: { // Novo container para distância e ícone à esquerda
         flexDirection: 'row',
-        justifyContent: 'space-between', 
         alignItems: 'center',
+        marginRight: 10, // Espaço entre o grupo da esquerda e a descrição
+        // flexShrink: 0, // Para não encolher se a descrição for longa (opcional)
     },
-    suggestionDescription: {
+    distanceTextLeft: {
+        fontSize: 14,
+        color: '#8E8E93',
+        // marginRight: 4, // Removido, pois o ícone agora tem margem à direita
+    },
+    locationIconLeft: {
+        // A cor já está definida inline, pode ser movida para cá se preferir
+        marginRight: 4, // Adicionado espaço à direita do ícone
+    },
+    descriptionWrapper: { // Wrapper para a descrição, para permitir que ela ocupe o espaço restante
+        flex: 1, // Faz este container ocupar o espaço restante
+    },
+    descriptionTextMain: {
         fontSize: 16,
         color: '#333', 
-        flexShrink: 1, 
-        marginRight: 8, 
+        // flexShrink: 1, // Não é mais necessário aqui, pois o wrapper controla o flex
     },
-    suggestionDistance: {
+    addressText: { // Novo estilo para o endereço abaixo do nome
         fontSize: 14,
-        color: '#8E8E93', // Cinza para distância
+        color: '#8E8E93',
     },
     placeholderContainer: {
         flex: 1,
