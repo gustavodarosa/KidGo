@@ -60,7 +60,8 @@ const HomeScreen = () => {
     const navigation = useNavigation();
 
     const handleNavigateToScheduleRide = () => {
-        navigation.navigate('ScheduleRide');
+        // Modificado para ir para a SearchScreen primeiro
+        navigation.navigate('SearchScreen'); 
     };
 
     const handleNavigateToDrivers = () => {
