@@ -23,18 +23,18 @@ const COLORS = {
     secondary: '#888888',
     accent: '#FFFFFF',
     lightGray: '#EEEEEE',
-    cardShadow: '#000',
-    babyBlueLight: '#A0D2EB', // Azul bebê um pouco mais escuro
+    cardShadow: '#000', // Mantido de seu contexto original
+    babyBlueLight: '#ADD8E6', // Azul bebê claro, como no seu exemplo
     babyBlueDark: '#87CEEB',  // Azul bebê um pouco mais escuro
 };
 
 const SUGGESTED_PLACES = [
     { id: 'school', name: 'Escola', icon: require('./assets/escola.png') },
     { id: 'home', name: 'Casa', icon: require('./assets/casa.png') },
-    { id: 'swimming', name: 'Natação', icon: require('./assets/natacao.png') },
+    { id: 'swimming', name: 'Natação', icon: '🧸' }, // Alterado para emoji como no seu exemplo
+    { id: 'tutoring', name: 'Reforço', icon: '🎨' },   // Adicionado como no seu exemplo
     { id: 'grandma', name: 'Casa da Vovó', icon: require('./assets/vovo.png') },
 ];
-SUGGESTED_PLACES.push({ id: 'snack', name: 'Lanchinho', icon: require('./assets/lanche.png') });
 
 // Obtendo as dimensões da tela
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -44,24 +44,13 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const suggestionCardWidth = screenWidth * 0.22;
 const suggestionCardHeight = suggestionCardWidth; // Para cards quadrados
 
-const FeatureCard = ({ iconName, iconType = FontAwesome, label, onPress }) => (
-    <TouchableOpacity style={styles.featureCard} onPress={onPress}>
-        {iconType === FontAwesome ? (
-            <FontAwesome name={iconName} size={22} color={COLORS.primary} style={styles.featureCardIcon} />
-        ) : (
-            <Ionicons name={iconName} size={22} color={COLORS.primary} style={styles.featureCardIcon} />
-        )}
-        <Text style={styles.featureCardLabel}>{label}</Text>
-    </TouchableOpacity>
-);
-
 const HomeScreen = () => {
     const [searchText, setSearchText] = useState('');
     const navigation = useNavigation();
 
     const handleNavigateToScheduleRide = () => {
-        // Modificado para ir para a SearchScreen primeiro
-        navigation.navigate('SearchScreen'); 
+        // Mantido como no seu exemplo, navegando para ScheduleRide
+        navigation.navigate('ScheduleRide');
     };
 
     const handleNavigateToDrivers = () => {
@@ -72,11 +61,6 @@ const HomeScreen = () => {
     const handleNavigateToHistory = () => {
         console.log('Navegar para Histórico');
         alert('Funcionalidade "Histórico" em desenvolvimento!');
-    };
-
-    const handleNavigateToChildProfile = () => {
-        console.log('Navegar para Perfil dos Filhos');
-        alert('Funcionalidade "Perfil dos Filhos" em desenvolvimento!');
     };
 
     const handleNavigateToSearch = () => {
@@ -90,24 +74,22 @@ const HomeScreen = () => {
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView style={scrollViewStyle}>
-                {/* Barra de Pesquisa agora é clicável */}
-                <TouchableOpacity onPress={handleNavigateToSearch} activeOpacity={0.8}>
-                    <View style={styles.searchBarContainer}>
-                        <FontAwesome name="search" size={20} color={COLORS.secondary} style={styles.searchIcon} />
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Pra onde vamos levar hoje?"
-                            value={searchText}
-                            // onChangeText={setSearchText} // Pode ser removido se a edição for só na SearchScreen
-                            placeholderTextColor={COLORS.secondary}
-                            editable={false} // Impede a edição direta na HomeScreen
-                        />
-                        <TouchableOpacity style={styles.nowButton}>
-                            <Ionicons name="time-outline" size={20} color={COLORS.primary} />
-                            <Text style={styles.nowButtonText}>Agora</Text>
-                        </TouchableOpacity>
-                    </View>
-                </TouchableOpacity>
+                {/* Barra de Pesquisa - como no seu exemplo */}
+                <View style={styles.searchBarContainer}>
+                    <FontAwesome name="search" size={20} color={COLORS.secondary} style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Pra onde vamos levar hoje?"
+                        value={searchText}
+                        onChangeText={setSearchText} // Habilitado como no seu exemplo
+                        placeholderTextColor={COLORS.secondary}
+                        // editable={true} // Por padrão é true
+                    />
+                    <TouchableOpacity style={styles.nowButton}>
+                        <Ionicons name="time-outline" size={20} color={COLORS.primary} />
+                        <Text style={styles.nowButtonText}>Agora</Text>
+                    </TouchableOpacity>
+                </View>
 
                 {/* Sugestões */}
                 <View style={styles.suggestionsSection}>
@@ -116,10 +98,13 @@ const HomeScreen = () => {
                         {SUGGESTED_PLACES.map(place => (
                             <TouchableOpacity key={place.id} style={styles.suggestionCard}>
                                 <View style={styles.suggestionIconContainer}> 
-                                    {typeof place.icon === 'string' ? (
+                                    {/* Modificado para renderizar emoji ou imagem */}
+                                    {typeof place.icon === 'string' && place.icon.length < 5 ? ( // Assumindo que emojis são curtos
                                         <Text style={styles.suggestionIcon}>{place.icon}</Text>
-                                    ) : (
+                                    ) : typeof place.icon === 'number' ? ( // Para require()
                                         <Image source={place.icon} style={styles.suggestionImage} resizeMode="contain" />
+                                    ) : (
+                                        <FontAwesome name="question-circle" size={suggestionCardWidth * 0.3} color={COLORS.secondary} /> // Fallback
                                     )}
                                 </View>
                                 <Text style={styles.suggestionText} numberOfLines={2} ellipsizeMode="tail">{place.name}</Text>
@@ -130,7 +115,7 @@ const HomeScreen = () => {
 
                 {/* Mascote */}
                 <Image
-                    source={require('./assets/search.png')}
+                    source={require('./assets/mascot_placeholder.png')} // Como no seu exemplo
                     style={styles.mascot}
                     resizeMode="contain"
                 />

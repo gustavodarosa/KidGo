@@ -75,8 +75,7 @@ const ScheduleRideScreen = ({ route, navigation }) => {
           <Text style={styles.errorTextDetail}>{`Por favor, volte e selecione um destino.`}</Text>
           <TouchableOpacity style={styles.errorBackButton} onPress={() => {
               console.log("[ScheduleRideScreen] Botão 'Voltar' da tela de erro pressionado.");
-              if (navigation && typeof 
-                navigation.goBack === 'function') {
+              if (navigation && typeof navigation.goBack === 'function') {
               navigation.goBack();
               } else {
                 console.error("[ScheduleRideScreen] navigation.goBack não é uma função ou navigation é undefined.");
